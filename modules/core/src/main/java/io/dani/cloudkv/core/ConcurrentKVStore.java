@@ -6,6 +6,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ConcurrentKVStore implements KVStore {
     private final ConcurrentHashMap<String, ValueEntry> map = new ConcurrentHashMap<>();
 
+    public ConcurrentKVStore() { this.map = new ConcurrentHashMap<>(); }
+    public ConcurrentKVStore(ConcurrentHashMap<String, ValueEntry> map) { this.map = map; }
+    public ConcurrentHashMap<String, ValueEntry> raw() { return map; }
+
     @Override public Optional<ValueEntry> get(String key) {
         return Optional.ofNullable(map.get(key));
     }
