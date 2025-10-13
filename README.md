@@ -9,4 +9,3 @@ A Concurrent Java Key–Value Store with RESTful, SQL, XML, and HTTPS Infrastruc
 - **XML/XSLT/XQuery** export for enterprise/DITA-style workflows
 - **Concurrency**: CHM + TTL sweeper + atomic commit
 - **Docs first**: requirements, design, ADRs, demo script
-
