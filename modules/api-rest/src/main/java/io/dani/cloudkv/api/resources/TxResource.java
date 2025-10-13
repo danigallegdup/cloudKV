@@ -1,7 +1,7 @@
 package io.dani.cloudkv.api.resources;
 
 import io.dani.cloudkv.core.*;
-
+import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -12,9 +12,9 @@ import java.util.UUID;
 @Path("/tx")
 @Produces(MediaType.APPLICATION_JSON)
 public final class TxResource {
-    private final TxManager tx;
 
-    public TxResource(TxManager tx) { this.tx = tx; }
+    @Inject
+    private TxManager tx; // injected by HK2
 
     @POST @Path("/begin")
     public Response begin() {
@@ -42,9 +42,8 @@ public final class TxResource {
         }
     }
 
-    // Tx-scoped PUT/GET/DELETE (simple forms for MVP)
     @POST @Path("/put")
-    @Consumes({MediaType.TEXT_PLAIN})
+    @Consumes(MediaType.TEXT_PLAIN)
     public Response put(@HeaderParam("X-Tx-Id") String txId,
                         @QueryParam("key") String key,
                         @QueryParam("ttl") Long ttlMs,
@@ -55,6 +54,8 @@ public final class TxResource {
         try {
             tx.put(UUID.fromString(txId), key, new ValueEntry(body==null?"":body, now, expires));
             return Response.ok(Map.of("status","OK")).build();
-        } catch (Exception e) { return Response.status(400).entity(Map.of("error","INVALID_TX")).build(); }
+        } catch (Exception e) {
+            return Response.status(400).entity(Map.of("error","INVALID_TX")).build();
+        }
     }
 }
