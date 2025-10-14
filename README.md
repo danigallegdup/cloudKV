@@ -182,27 +182,64 @@ make it
 ## ✅ Example Output Snapshot
 
 ```text
-# Health
-{"status":"UP"}
+ root@Nayla mnt/..../cloudKV  CI  scripts/it_http_mvp.sh
 
-# CRUD
-{"status":"OK"}
-{"key":"foo","value":"bar","createdAtMs":1760401877958}
-{"error":"NOT_FOUND"}
+# HEALTH
+RESPONSE: {"status":"UP"}
+
+# CRUD: CREATE
+RESPONSE: {"status":"OK"}
+
+# CRUD: READ
+RESPONSE: {"key":"foo","value":"bar","createdAtMs":1760478701652}
+{
+  "key": "foo",
+  "value": "bar",
+  "createdAtMs": 1760478701652
+}
+
+# CRUD: UPDATE
+RESPONSE: {"status":"OK"}
+{
+  "status": "OK"
+}
+RESPONSE: {"key":"foo","value":"baz","createdAtMs":1760478701764}
+{
+  "key": "foo",
+  "value": "baz",
+  "createdAtMs": 1760478701764
+}
+
+# CRUD: DELETE
+DELETE HTTP CODE: 204
+RESPONSE: {"error":"NOT_FOUND"}
 
 # TTL
-{"status":"OK"}
-{"error":"NOT_FOUND"}
+RESPONSE: {"status":"OK"}
+RESPONSE: {"error":"NOT_FOUND"}
 
-# Transactions
-{"status":"OK"}
-{"status":"COMMITTED"}
-{"key":"order123","value":"pending",...}
-{"status":"ROLLEDBACK"}
-{"error":"NOT_FOUND"}
+# TX: BEGIN -> PUT -> COMMIT
+RESPONSE: {"txId":"45752f20-721f-4f79-97e1-6803e37a20e6"}
+RESPONSE: {"status":"OK"}
+{
+  "status": "OK"
+}
+RESPONSE: {"status":"COMMITTED"}
+{
+  "status": "COMMITTED"
+}
+RESPONSE: {"key":"order123","value":"pending","createdAtMs":1760478703974}
 
-# Concurrency
-{"key":"k3","value":"v3","createdAtMs":1760402063262}
+# TX: ROLLBACK
+RESPONSE: {"txId":"fbb668c0-4696-45f3-a777-ccf021e5015d"}
+RESPONSE: {"status":"OK"}
+RESPONSE: {"status":"ROLLEDBACK"}
+RESPONSE: {"error":"NOT_FOUND"}
+
+# CONCURRENCY: 5 parallel writes
+RESPONSE: {"key":"k3","value":"v3","createdAtMs":1760478704138}
+
+✅ All HTTP MVP integration tests passed.
 ```
 
 ---

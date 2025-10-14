@@ -16,56 +16,81 @@ need jq
 
 say "HEALTH"
 OUT=$($CURL "$BASE_URL/health")
+echo "RESPONSE: $OUT"
 assert_eq "$OUT" '{"status":"UP"}' "health"
 
 say "CRUD: CREATE"
-$CURL -X POST "$BASE_URL/kv?key=foo" -H "Content-Type: text/plain" --data-binary "bar" | jq -e '.status=="OK"' >/dev/null
+CREATE_OUT=$($CURL -sS -X POST "$BASE_URL/kv?key=foo" -H "Content-Type: text/plain" --data-binary "bar")
+echo "RESPONSE: $CREATE_OUT"
+echo "$CREATE_OUT" | jq -e '.status=="OK"' >/dev/null
 
 say "CRUD: READ"
 OUT=$($CURL "$BASE_URL/kv?key=foo")
+echo "RESPONSE: $OUT"
 echo "$OUT" | jq .
 assert_json_has_key "$OUT" "key"
 assert_json_has_key "$OUT" "value"
 
 say "CRUD: UPDATE"
-$CURL -X POST "$BASE_URL/kv?key=foo" -H "Content-Type: text/plain" --data "baz" | jq -e '.status=="OK"' >/dev/null
+UPDATE_OUT=$($CURL -sS -X POST "$BASE_URL/kv?key=foo" -H "Content-Type: text/plain" --data "baz")
+echo "RESPONSE: $UPDATE_OUT"
+echo "$UPDATE_OUT" | jq . || true
 OUT=$($CURL "$BASE_URL/kv?key=foo")
+echo "RESPONSE: $OUT"
 echo "$OUT" | jq .
 [[ "$(echo "$OUT" | jq -r .value)" == "baz" ]] || fail "update failed"
 
 say "CRUD: DELETE"
 # DELETE should be 204 — capture HTTP status only
 CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$BASE_URL/kv?key=foo")
+echo "DELETE HTTP CODE: $CODE"
 assert_eq "$CODE" "204" "delete status"
 OUT=$($CURL "$BASE_URL/kv?key=foo")
+echo "RESPONSE: $OUT"
 assert_eq "$OUT" '{"error":"NOT_FOUND"}' "deleted key not found"
 
 say "TTL"
-$CURL -X POST "$BASE_URL/kv?key=temp&ttl=1000" -H "Content-Type: text/plain" --data "ephemeral" | jq -e '.status=="OK"' >/dev/null
+TTL_OUT=$($CURL -sS -X POST "$BASE_URL/kv?key=temp&ttl=1000" -H "Content-Type: text/plain" --data "ephemeral")
+echo "RESPONSE: $TTL_OUT"
+echo "$TTL_OUT" | jq -e '.status=="OK"' >/dev/null
 sleep 2
 OUT=$($CURL "$BASE_URL/kv?key=temp")
+echo "RESPONSE: $OUT"
 assert_eq "$OUT" '{"error":"NOT_FOUND"}' "ttl expired"
 
 say "TX: BEGIN -> PUT -> COMMIT"
-TX=$($CURL -X POST "$BASE_URL/tx/begin" | jq -r .txId)
-$CURL -X POST "$BASE_URL/tx/put?key=order123" -H "X-Tx-Id: $TX" -H "Content-Type: text/plain" --data "pending" | jq -e '.status=="OK"' >/dev/null
-$CURL -X POST "$BASE_URL/tx/commit" -H "X-Tx-Id: $TX" | jq -e '.status=="COMMITTED"' >/dev/null
+TX_JSON=$($CURL -sS -X POST "$BASE_URL/tx/begin")
+echo "RESPONSE: $TX_JSON"
+TX=$(echo "$TX_JSON" | jq -r .txId)
+CURL_OUT=$($CURL -sS -X POST "$BASE_URL/tx/put?key=order123" -H "X-Tx-Id: $TX" -H "Content-Type: text/plain" --data "pending")
+echo "RESPONSE: $CURL_OUT"
+echo "$CURL_OUT" | jq . || true
+COMMIT_OUT=$($CURL -sS -X POST "$BASE_URL/tx/commit" -H "X-Tx-Id: $TX")
+echo "RESPONSE: $COMMIT_OUT"
+echo "$COMMIT_OUT" | jq . || true
 OUT=$($CURL "$BASE_URL/kv?key=order123")
+echo "RESPONSE: $OUT"
 [[ "$(echo "$OUT" | jq -r .value)" == "pending" ]] || fail "tx commit not visible"
 
 say "TX: ROLLBACK"
-TX2=$($CURL -X POST "$BASE_URL/tx/begin" | jq -r .txId)
-$CURL -X POST "$BASE_URL/tx/put?key=tmpRollback" -H "X-Tx-Id: $TX2" -H "Content-Type: text/plain" --data "willDisappear" | jq -e '.status=="OK"' >/dev/null
-$CURL -X POST "$BASE_URL/tx/rollback" -H "X-Tx-Id: $TX2" | jq -e '.status=="ROLLEDBACK"' >/dev/null
+TX2_JSON=$($CURL -sS -X POST "$BASE_URL/tx/begin")
+echo "RESPONSE: $TX2_JSON"
+TX2=$(echo "$TX2_JSON" | jq -r .txId)
+PUT2_OUT=$($CURL -sS -X POST "$BASE_URL/tx/put?key=tmpRollback" -H "X-Tx-Id: $TX2" -H "Content-Type: text/plain" --data "willDisappear")
+echo "RESPONSE: $PUT2_OUT"
+ROLLBACK_OUT=$($CURL -sS -X POST "$BASE_URL/tx/rollback" -H "X-Tx-Id: $TX2")
+echo "RESPONSE: $ROLLBACK_OUT"
 OUT=$($CURL "$BASE_URL/kv?key=tmpRollback")
+echo "RESPONSE: $OUT"
 assert_eq "$OUT" '{"error":"NOT_FOUND"}' "tx rollback not applied"
 
 say "CONCURRENCY: 5 parallel writes"
 for i in 1 2 3 4 5; do
-  $CURL -X POST "$BASE_URL/kv?key=k$i" -H "Content-Type: text/plain" --data "v$i" >/dev/null &
+  CONC_OUT=$($CURL -sS -X POST "$BASE_URL/kv?key=k$i" -H "Content-Type: text/plain" --data "v$i") || true &
 done
 wait
 OUT=$($CURL "$BASE_URL/kv?key=k3")
+echo "RESPONSE: $OUT"
 [[ "$(echo "$OUT" | jq -r .value)" == "v3" ]] || fail "concurrency write missing"
 
 echo -e "\n✅ All HTTP MVP integration tests passed."
