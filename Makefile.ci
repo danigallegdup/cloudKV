@@ -1,21 +1,41 @@
-# CI Makefile
-# Usage: make -f Makefile.ci ci
+# Usage:
+# make -f Makefile.ci build
+# make -f Makefile.ci run
+# make -f Makefile.ci it
+# make -f Makefile.ci ci
 
-.PHONY: ci
-ci:
+GRADLE=./gradlew
+API_MOD=:modules:api-rest
+HEALTH_URL?=http://localhost:8080/health
+
+.PHONY: build run wait-health it stop ci
+
+build:
+	$(GRADLE) clean build --no-daemon --console=plain --stacktrace
+
+run:
 	@echo "Setting JAVA_HOME and running Gradle..."
 	@JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; \
 	export PATH="$$JAVA_HOME/bin:$$PATH"; \
 	./gradlew :modules:api-rest:run --no-daemon --console=plain --stacktrace
 
-	@echo "Attempting to trigger GitHub Actions workflow .github/workflows/ci.yml..."
-	@BRANCH=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main); \
-	if command -v gh >/dev/null 2>&1; then \
-		echo "Triggering workflow 'ci.yml' on branch $$BRANCH via gh..."; \
-		gh workflow run ci.yml --ref "$$BRANCH" || echo "gh workflow run failed"; \
-	elif command -v act >/dev/null 2>&1; then \
-		echo "'gh' not found, running workflow locally with act..."; \
-		act -W .github/workflows/ci.yml || echo "act failed to run workflow"; \
-	else \
-		echo "Neither 'gh' nor 'act' found. To trigger the workflow remotely install GitHub CLI (gh), or install 'act' to run it locally."; \
-	fi
+wait-health:
+	@i=0; \
+	until curl -fsS "$(HEALTH_URL)" >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -gt 60 ]; then echo "API not healthy"; exit 1; fi; \
+	  echo "Waiting for API... ($$i/60)"; sleep 1; \
+	done; \
+	echo "API is UP"
+
+it:
+	chmod +x scripts/it_http_mvp.sh
+	./scripts/it_http_mvp.sh
+
+stop:
+	@if [ -f api.pid ]; then kill `cat api.pid` || true; sleep 2; rm -f api.pid; fi
+	@pkill -f "org.gradle.launcher.GradleMain" || true
+	@pkill -f "$(API_MOD):run" || true
+
+# "ci" locally mimics what the cloud CI does
+ci: build run wait-health it stop

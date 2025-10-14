@@ -18,7 +18,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: 'gradle'
+          cache: gradle
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -28,24 +28,31 @@ jobs:
 
       - name: Start server
         run: |
+          chmod +x modules/api-rest/build/install/api-rest/bin/api-rest
           nohup modules/api-rest/build/install/api-rest/bin/api-rest > server.log 2>&1 &
           echo $! > server.pid
+          sleep 2
+          ps aux | grep api-rest
 
       - name: Wait for health
         run: |
           for i in {1..30}; do
-            if curl -s http://localhost:8080/health | grep -q '"UP"'; then
-              echo "Server healthy"; exit 0;
+            if curl -s http://localhost:8080/health | grep -qi 'up'; then
+              echo "✅ Server healthy"
+              exit 0
             fi
+            echo "Waiting for server... ($i)"
             sleep 1
           done
-          echo "Server did not become healthy in time"; cat server.log; exit 1
+          echo "❌ Server did not become healthy in time"
+          cat server.log
+          exit 1
 
       - name: Install test deps
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Run HTTP MVP integration tests
-        run: scripts/it_http_mvp.sh
+        run: bash scripts/it_http_mvp.sh
 
       - name: Always show last server log lines
         if: always()
@@ -62,5 +69,11 @@ jobs:
 
       - name: Stop server
         if: always()
+        shell: bash
         run: |
-          if [ -f server.pid ]; then kill $(cat server.pid) || true; fi
+          if [ -f server.pid ]; then
+            echo "Stopping server PID $(cat server.pid)"
+            kill "$(cat server.pid)" || true
+          else
+            echo "No server.pid found, skipping stop"
+          fi
