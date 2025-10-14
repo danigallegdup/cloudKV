@@ -47,3 +47,7 @@ Thumbs.db
 *.db
 *.h2.db
 *.mv.db
+
+# Temp files
+Run
+Get
