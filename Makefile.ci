@@ -1,0 +1,21 @@
+# CI Makefile
+# Usage: make -f Makefile.ci ci
+
+.PHONY: ci
+ci:
+	@echo "Setting JAVA_HOME and running Gradle..."
+	@JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64; \
+	export PATH="$$JAVA_HOME/bin:$$PATH"; \
+	./gradlew :modules:api-rest:run --no-daemon --console=plain --stacktrace
+
+	@echo "Attempting to trigger GitHub Actions workflow .github/workflows/ci.yml..."
+	@BRANCH=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main); \
+	if command -v gh >/dev/null 2>&1; then \
+		echo "Triggering workflow 'ci.yml' on branch $$BRANCH via gh..."; \
+		gh workflow run ci.yml --ref "$$BRANCH" || echo "gh workflow run failed"; \
+	elif command -v act >/dev/null 2>&1; then \
+		echo "'gh' not found, running workflow locally with act..."; \
+		act -W .github/workflows/ci.yml || echo "act failed to run workflow"; \
+	else \
+		echo "Neither 'gh' nor 'act' found. To trigger the workflow remotely install GitHub CLI (gh), or install 'act' to run it locally."; \
+	fi
