@@ -26,6 +26,7 @@ public final class App {
                     @Override protected void configure() {
                         bind(store).to(KVStore.class);
                         bind(tx).to(TxManager.class);
+                        bind(new io.dani.cloudkv.api.ExportService(store)).to(io.dani.cloudkv.api.ExportService.class);
                     }
                 });
 
