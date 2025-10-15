@@ -18,6 +18,10 @@ dependencies {
     // Saxon for XSLT and XQuery support
     implementation("net.sf.saxon:Saxon-HE:12.4")
 
+    // JAX-WS (Metro) for lightweight SOAP stub
+    implementation("com.sun.xml.ws:jaxws-rt:4.0.2")
+    implementation("jakarta.xml.ws:jakarta.xml.ws-api:4.0.1")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
 }
 

@@ -103,3 +103,11 @@ PY
 XQ_OUT=$($CURL "${BASE_URL}/export/query?xq=${ENC}" || true)
 echo "RESPONSE: $XQ_OUT"
 echo "$XQ_OUT" | grep "<entry" >/dev/null || fail "xquery did not return entries"
+
+# Optional SOAP WSDL check if enabled
+if [ "${SOAP_ENABLED:-}" = "true" ] || [ "${SOAP_ENABLED:-}" = "1" ]; then
+  say "SOAP: WSDL"
+  WSDL=$($CURL "http://localhost:8090/soap/kv?wsdl" || true)
+  echo "RESPONSE: $WSDL"
+  echo "$WSDL" | grep -i "definitions" >/dev/null || fail "soap wsdl missing definitions"
+fi
