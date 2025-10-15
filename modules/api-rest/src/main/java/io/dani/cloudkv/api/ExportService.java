@@ -58,8 +58,13 @@ public final class ExportService {
     }
 
     public String runXQuery(String query) throws Exception {
+        if (query == null || query.isBlank()) throw new IllegalArgumentException("xquery is required");
+        // Use a read-only processor (disable updating extensions)
         Processor proc = new Processor(false);
+        proc.setConfigurationProperty("http://saxon.sf.net/feature/allowExternalFunctions", Boolean.FALSE);
         XQueryCompiler comp = proc.newXQueryCompiler();
+        // For safety, disallow updating expressions at compile-time
+        comp.setLanguageVersion("3.1");
         XQueryExecutable exec = comp.compile(query);
         XQueryEvaluator eval = exec.load();
         Document doc = snapshotAsDocument();
@@ -67,6 +72,8 @@ public final class ExportService {
         eval.setContextItem(ctx);
         StringWriter sw = new StringWriter();
         Serializer ser = proc.newSerializer(sw);
+        // ensure serializer outputs XML
+        ser.setOutputProperty(Serializer.Property.METHOD, "xml");
         eval.run(ser);
         return sw.toString();
     }

@@ -50,6 +50,9 @@ public class ExportResource {
         if (!enabled()) {
             return Response.status(404).entity("XML export disabled").build();
         }
+        if (xq == null || xq.isBlank()) {
+            return Response.status(400).entity("missing xq parameter").build();
+        }
         String result = svc.runXQuery(xq);
         return Response.ok(result).build();
     }

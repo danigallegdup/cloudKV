@@ -1,187 +1,66 @@
-# cloudKV: DEV Branch: Merge/Test/Documentation -- ready for main
+# cloudKV
 
-A Concurrent Java Key–Value Store with RESTful, SQL, XML, and HTTPS Infrastructure Features
+<p align="left">
+  <img src="https://img.shields.io/badge/Java-17-red" />
+  <img src="https://img.shields.io/badge/JAX--RS-Jersey%203-blue" />
+  <img src="https://img.shields.io/badge/Server-Jetty%2011-ff69b4" />
+  <img src="https://img.shields.io/badge/HTTP-1.1-informational" />
+  <img src="https://img.shields.io/badge/HTTPS-dev%20keystore-success" />
+  <img src="https://img.shields.io/badge/SQL-JDBC%20%7C%20H2-yellow" />
+  <img src="https://img.shields.io/badge/XML-XSLT%203.0-brightgreen" />
+  <img src="https://img.shields.io/badge/XQuery-s9api-brightgreen" />
+  <img src="https://img.shields.io/badge/SOAP-JAX--WS%20(Metro)-blueviolet" />
+  <img src="https://img.shields.io/badge/Build-Gradle%209%20(KTS)-blue" />
+  <img src="https://img.shields.io/badge/CI-GitHub%20Actions-lightgrey" />
+  <img src="https://img.shields.io/badge/Docs-ADRs%20%7C%20PlantUML-important" />
+  <img src="https://img.shields.io/badge/CLI-curl%20%7C%20jq-green" />
+  <img src="https://img.shields.io/badge/OS-Linux%20%7C%20WSL-black" />
+</p>
 
-## About This project
+**A Concurrent Java Key–Value Store** with **RESTful**, **SQL**, **XML/XSLT/XQuery**, and **HTTPS** infrastructure features.
 
-- **Java web server (JAX-RS/Jersey on Jetty)** with **HTTPS**
-- **SQL transactions** via **JDBC/H2** on commit
-- **XML/XSLT/XQuery** export for enterprise/DITA-style workflows
-- **Concurrency**: CHM + TTL sweeper + atomic commit
-- **Docs first**: requirements, design, ADRs, demo script
+[![Verification GIF](./docs/MileStones/cloudkv_verification.gif)]
 
-> **cloudKV** is a thread-safe, RESTful, in-memory key–value database built in Java 17.
-> It exposes HTTP APIs on port `8080`, supports TTL expiry, transaction-like operations (BEGIN / COMMIT / ROLLBACK), and handles concurrent requests safely — a lightweight Redis-style system implemented from scratch.
+## Highlights
 
----
+* **Java Web Server (REST/JAX‑RS + HTTPS):** Jetty 11 with Jersey 3 (HTTP/1.1), dev HTTPS profile, consistent status codes and error schema.
+* **SQL & Transactions (ACID awareness):** Transaction overlay with BEGIN/COMMIT/ROLLBACK; commit‑time persistence via JDBC/H2; rollback discards staged writes.
+* **Concurrency in a Web‑Server Context:** Thread‑safe CHM core, atomic commits, background TTL sweeper using ScheduledExecutorService under concurrent clients.
+* **XML Technology Stack:** /export/xml snapshot, XSLT transform to /export/html, and read‑only XQuery via Saxon s9api at /export/query.
+* **SOAP Interop (JAX‑WS):** Minimal SOAP wrapper (Metro) on port 8090 for get/put/delete, demonstrating familiarity beyond REST.
+* **LLM/AI API Familiarity:** NLQ endpoint maps simple English → deterministic XQuery templates; optional pluggable LLM client behind a feature flag.
 
-## 🚀 Quick Start (WSL / Linux)
+## 🧱 Architecture (high‑level)
 
-```bash
-# 1. Prerequisites
-sudo apt update
-sudo apt install -y openjdk-17-jdk curl jq
-
-# 2. Clone and build
-git clone https://github.com/youruser/cloudKV.git
-cd cloudKV
-./gradlew :modules:api-rest:build
-
-# 3. Run the REST server (port 8080)
-./gradlew :modules:api-rest:run
-# → cloudKV running on http://localhost:8080
+```
+Client (curl/Postman/SPA)
+        │  HTTP/JSON           SOAP
+        │                      8090
+        ▼                      │
+  Jetty + Jersey (8080)   JAX‑WS Endpoint
+     /kv /tx /health           (KVSoap)
+        │                          │
+        ├── Service Layer (TxManager, ExportService, SearchResource)
+        │
+        ├── ConcurrentKVStore (CHM<ValueEntry>)
+        │
+        └── JDBC/H2 (commit‑time write‑through)
 ```
 
----
+## 🔧 Tech Stack
 
-## 🧩 API Showcase
+* **Language**: Java 17
+* **Web**: Jetty 11, Jersey 3 (JAX‑RS)
+* **XML/XSLT/XQuery**: Saxon‑HE (s9api), XSLT 3.0 stylesheet
+* **SOAP**: Metro JAX‑WS RI (Jakarta 4.x)
+* **Persistence**: JDBC/H2 (commit‑time)
+* **Concurrency**: CHM, `ScheduledExecutorService`
+* **Build/CI**: Gradle 9 (Kotlin DSL), GitHub Actions, Makefile
 
-All endpoints are plain HTTP (no HTTPS required in dev).
 
-### 🩺 Health Check
-
-```bash
-curl -s http://localhost:8080/health
-# → {"status":"UP"}
-```
-
----
-
-### ⚙️ Basic CRUD Operations
+## Example Test Run Output
 
 ```bash
-# CREATE
-curl -s -X POST "http://localhost:8080/kv?key=foo" \
-  -H "Content-Type: text/plain" \
-  --data "bar"
-# → {"status":"OK"}
-
-# READ
-curl -s "http://localhost:8080/kv?key=foo"
-# → {"key":"foo","value":"bar","createdAtMs":1760401877958}
-
-# DELETE
-curl -s -X DELETE "http://localhost:8080/kv?key=foo"
-curl -s "http://localhost:8080/kv?key=foo"
-# → {"error":"NOT_FOUND"}
-```
-
----
-
-### ⏱️ TTL (Time-To-Live) Expiration
-
-```bash
-# Create a temporary key that expires in 1 second
-curl -s -X POST "http://localhost:8080/kv?key=temp&ttl=1000" \
-  -H "Content-Type: text/plain" \
-  --data "ephemeral"
-# → {"status":"OK"}
-
-sleep 2
-curl -s "http://localhost:8080/kv?key=temp"
-# → {"error":"NOT_FOUND"}  (expired automatically)
-```
-
----
-
-### 💾 Transactions (BEGIN / COMMIT / ROLLBACK)
-
-```bash
-# Start a new transaction
-TX=$(curl -s -X POST http://localhost:8080/tx/begin | jq -r .txId)
-echo $TX
-# → e.g. 7d1b66f8-6e47-43ce-9623-f92a5a80df3b
-
-# Stage a write inside TX
-curl -s -X POST "http://localhost:8080/tx/put?key=order123" \
-  -H "X-Tx-Id: $TX" -H "Content-Type: text/plain" \
-  --data "pending"
-# → {"status":"OK"}
-
-# Commit it
-curl -s -X POST http://localhost:8080/tx/commit -H "X-Tx-Id: $TX"
-# → {"status":"COMMITTED"}
-
-# Verify it’s visible globally
-curl -s "http://localhost:8080/kv?key=order123"
-# → {"key":"order123","value":"pending", ...}
-```
-
-#### Rollback example
-
-```bash
-TX2=$(curl -s -X POST http://localhost:8080/tx/begin | jq -r .txId)
-curl -s -X POST "http://localhost:8080/tx/put?key=tmpRollback" \
-  -H "X-Tx-Id: $TX2" -H "Content-Type: text/plain" \
-  --data "willDisappear"
-curl -s -X POST http://localhost:8080/tx/rollback -H "X-Tx-Id: $TX2"
-# → {"status":"ROLLEDBACK"}
-
-curl -s "http://localhost:8080/kv?key=tmpRollback"
-# → {"error":"NOT_FOUND"}
-```
-
----
-
-### 🧵 Concurrency Demonstration
-
-```bash
-# Spawn 5 parallel writes (simulating concurrent clients)
-for i in {1..5}; do
-  curl -s -X POST "http://localhost:8080/kv?key=k$i" \
-    -H "Content-Type: text/plain" --data "v$i" &
-done
-wait
-
-# Verify data consistency
-curl -s "http://localhost:8080/kv?key=k3"
-# → {"key":"k3","value":"v3","createdAtMs":1760402063262}
-```
-
----
-
-## 🧠 What This Demonstrates
-
-| Concept                         | How It’s Shown                                                           |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| **Client-Server Architecture**  | RESTful API built on Jetty + Jersey                                      |
-| **Concurrency & Thread Safety** | `ConcurrentHashMap` + background TTL eviction thread                     |
-| **HTTP Standards**              | Correct verbs, status codes, and headers                                 |
-| **SQL / ACID Awareness**        | `BEGIN`, `COMMIT`, `ROLLBACK` mimic transactional isolation              |
-| **Multi-Threaded Design**       | Multiple parallel requests and TTL cleanup thread                        |
-| **XML Stack (optional next)**   | `/export/xml` and `/export/html` endpoints transform store data via XSLT |
-| **Observability**               | `/health` endpoint for uptime and monitoring                             |
-
----
-
-## 🧪 Automated Integration Test
-
-Run all of the above automatically:
-
-```bash
-make it
-# Builds, runs cloudKV, executes tests, prints ✅ All HTTP MVP integration tests passed.
-```
-
----
-
-## 🦯 Tech Stack
-
-| Layer        | Technology                                | Purpose                                  |
-| ------------ | ----------------------------------------- | ---------------------------------------- |
-| Core Engine  | `ConcurrentHashMap`, Java 17              | Thread-safe key–value store              |
-| Web Server   | Jetty 11 + Jersey 3                       | RESTful API over HTTP/1.1                |
-| Transactions | Custom overlay (`TxManager`, `TxContext`) | Simulated ACID behavior                  |
-| Concurrency  | `ScheduledExecutorService`                | Background TTL and eviction              |
-| Build        | Gradle 9 Kotlin DSL                       | Multi-module setup (`core` + `api-rest`) |
-| Testing      | Bash + `curl` + `jq`                      | Integration verification                 |
-| CI/CD        | GitHub Actions + Makefile                 | Automated build + test pipeline          |
-
----
-
-## ✅ Example Output Snapshot
-
-```text
  root@Nayla mnt/..../cloudKV  CI  scripts/it_http_mvp.sh
 
 # HEALTH
@@ -239,56 +118,63 @@ RESPONSE: {"error":"NOT_FOUND"}
 # CONCURRENCY: 5 parallel writes
 RESPONSE: {"key":"k3","value":"v3","createdAtMs":1760478704138}
 
+# XML/XSLT/XQuery
+RESPONSE: <store><entry key="foo"><value>baz</value></entry><entry key="k1"><value>v1</value></entry><entry key="k2"><value>v2</value></entry><entry key="k3"><value>v3</value></entry><entry key="k4"><value>v4</value></entry><entry key="k5"><value>v5</value></entry><entry key="order123"><value>pending</value></entry></store>
+
+# SOAP (JAX-WS)
+RESPONSE: <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://api.modules.cloudkv/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="KVService" targetNamespace="http://api.modules.cloudkv/"><wsdl:service name="KVService"><wsdl:port name="KVSoapPort" binding="tns:KVSoapBinding"><soap:address location="http://0.0.0.0:8090/soap/kv"/></wsdl:port></wsdl:service></wsdl:definitions>
+
+# NLQ Adapter
+RESPONSE: { "xquery": "for $e in /store/entry[starts-with(@key,'k')] return $e" }
+
 ✅ All HTTP MVP integration tests passed.
 ```
 
----
+## Configuration & Feature Flags
 
-### 🏁 Summary
+Toggle optional components via environment variables. Defaults are safe for local development.
 
-`cloudKV` is a compact distributed-systems training ground — proving understanding of:
+| Flag                 | Default | Description                                                                                                       |
+| -- | :--: | -- |
+| `XML_EXPORT_ENABLED` |  `true` | Enables XML snapshot, XSLT HTML transform, and XQuery endpoints (`/export/xml`, `/export/html`, `/export/query`). |
+| `SOAP_ENABLED`       | `false` | Publishes the JAX-WS SOAP service at `http://0.0.0.0:8090/soap/kv`.                                               |
+| `LLM_ENABLED`        | `false` | Activates the NLQ → LLM pathway (deterministic template mapping remains the fallback).                            |
+| `LLM_PROVIDER`       |   `""`  | Provider name/key used only when `LLM_ENABLED=true`.                                                              |
 
-* Client-server & HTTP/HTTPS architecture
-* Concurrency primitives and thread safety
-* RESTful design, transactions, and TTL management
-* Clean modular build (Gradle 9, multi-module, Java 17)
-* Production-style testing via `curl`, `jq`, and GitHub Actions
+**Ports**
 
-> **“From key-value semantics to transactional logic — everything happens safely, concurrently, and over real HTTP.”**
+* REST (Jetty/Jersey): **8080**
+* SOAP (JAX-WS): **8090** (only when `SOAP_ENABLED=true`)
 
----
 
-## 🖨️ Architecture Diagram + Process Flow
+## Quick Start (Linux/WSL)
 
-```text
-           ┌────────────────────────────┐
-           │        HTTP Client         │
-           │ (curl, Postman, browser)   │
-           └──────────────┬─────────────┘
-                          │ REST / JSON
-           ┌──────────────┴──────────────┐
-           │      Jetty + Jersey API     │
-           │   (/kv, /tx, /health)       │
-           └──────────────┬──────────────┘
-                          │ Service calls
-         ┌────────────────┴────────────────┐
-         │           Service Layer         │
-         │ TxManager + TTL Scheduler       │
-         └────────────────┬────────────────┘
-                          │ Thread-safe access
-     ┌────────────────────┴────────────────────┐
-     │           ConcurrentKVStore             │
-     │ (ConcurrentHashMap<String,ValueEntry>)  │
-     └────────────────────┬────────────────────┘
-                          │ Optional persistence
-              ┌───────────┴────────────┐
-              │        SQL/JDBC        │
-              └────────────────────────┘
+```bash
+# 1) Prerequisites
+sudo apt update
+sudo apt install -y openjdk-17-jdk curl jq
 
-Process Flow:
-1. Client sends HTTP requests (`/kv`, `/tx`, `/health`).
-2. Jetty routes them to Jersey resources.
-3. Resources delegate to core store or transaction manager.
-4. TTL background thread expires keys asynchronously.
-5. Responses are serialized as JSON and returned to client.
+# 2) Clone & build
+git clone https://github.com/danigallegdup/cloudKV.git
+cd cloudKV
+./gradlew :modules:api-rest:build
+
+# 3) Run REST server (8080)
+XML_EXPORT_ENABLED=true \
+SOAP_ENABLED=false \
+LLM_ENABLED=false \
+./gradlew :modules:api-rest:run
+# → cloudKV running on http://localhost:8080
 ```
+
+> HTTPS (dev): self‑signed keystore is wired for local profiles; REST examples below use HTTP for convenience.
+
+## Security Notes (dev focus) (dev focus)
+
+* Dev HTTPS uses a self‑signed keystore; do **not** reuse in production.
+* XQuery endpoint is **read‑only** and runs against an in‑memory snapshot.
+* NLQ mapping is deterministic by default; any LLM usage is opt‑in and isolated.
+
+## MIT License
+
+Licensed under the MIT License. See [LICENSE](LICENSE) for details.
