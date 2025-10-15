@@ -30,7 +30,7 @@
 * **SOAP Interop (JAX‑WS):** Minimal SOAP wrapper (Metro) on port 8090 for get/put/delete, demonstrating familiarity beyond REST.
 * **LLM/AI API Familiarity:** NLQ endpoint maps simple English → deterministic XQuery templates; optional pluggable LLM client behind a feature flag.
 
-## 🧱 Architecture (high‑level)
+## Architecture (high‑level)
 
 ```
 Client (curl/Postman/SPA)
@@ -47,7 +47,7 @@ Client (curl/Postman/SPA)
         └── JDBC/H2 (commit‑time write‑through)
 ```
 
-## 🔧 Tech Stack
+## Tech Stack
 
 * **Language**: Java 17
 * **Web**: Jetty 11, Jersey 3 (JAX‑RS)
