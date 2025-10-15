@@ -93,6 +93,16 @@ OUT=$($CURL "$BASE_URL/kv?key=k3")
 echo "RESPONSE: $OUT"
 [[ "$(echo "$OUT" | jq -r .value)" == "v3" ]] || fail "concurrency write missing"
 
+say "EXPORT: XML"
+XML_OUT=$($CURL -sS "$BASE_URL/export/xml" || true)
+echo "RESPONSE: $XML_OUT"
+echo "$XML_OUT" | grep "<store>" >/dev/null || fail "export xml missing <store>"
+
+say "EXPORT: HTML"
+HTML_OUT=$($CURL -sS "$BASE_URL/export/html" || true)
+echo "RESPONSE: $HTML_OUT"
+echo "$HTML_OUT" | grep "<html" >/dev/null || fail "export html missing <html>"
+
 echo -e "\n✅ All HTTP MVP integration tests passed."
 
 say "NLQ: basic"
