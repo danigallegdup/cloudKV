@@ -94,3 +94,12 @@ echo "RESPONSE: $OUT"
 [[ "$(echo "$OUT" | jq -r .value)" == "v3" ]] || fail "concurrency write missing"
 
 echo -e "\n✅ All HTTP MVP integration tests passed."
+
+say "XQUERY: select entries with key prefix k"
+ENC=$(python3 - <<'PY'
+import urllib.parse;print(urllib.parse.quote("for $e in /store/entry[starts-with(@key,'k')] return $e"))
+PY
+)
+XQ_OUT=$($CURL "${BASE_URL}/export/query?xq=${ENC}" || true)
+echo "RESPONSE: $XQ_OUT"
+echo "$XQ_OUT" | grep "<entry" >/dev/null || fail "xquery did not return entries"

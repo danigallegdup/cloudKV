@@ -15,6 +15,9 @@ dependencies {
     implementation("jakarta.json.bind:jakarta.json.bind-api:3.0.0")
     implementation("org.eclipse:yasson:3.0.4")
 
+    // Saxon for XSLT and XQuery support
+    implementation("net.sf.saxon:Saxon-HE:12.4")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
 }
 
