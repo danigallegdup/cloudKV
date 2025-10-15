@@ -1,4 +1,4 @@
-# cloudKV MVP branch: to always fall back in case of emergency
+# cloudKV: DEV Branch: Merge/Test/Documentation -- ready for main
 
 A Concurrent Java Key–Value Store with RESTful, SQL, XML, and HTTPS Infrastructure Features
 
