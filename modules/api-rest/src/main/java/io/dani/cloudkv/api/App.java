@@ -26,6 +26,17 @@ public final class App {
                     @Override protected void configure() {
                         bind(store).to(KVStore.class);
                         bind(tx).to(TxManager.class);
+                        // Bind LLM implementation depending on env flags
+                        String llmEnabled = System.getenv("LLM_ENABLED");
+                        if (llmEnabled == null) llmEnabled = System.getProperty("LLM_ENABLED");
+                        if (llmEnabled != null && (llmEnabled.equalsIgnoreCase("1") || llmEnabled.equalsIgnoreCase("true"))) {
+                            String provider = System.getenv("LLM_PROVIDER");
+                            if (provider == null) provider = System.getProperty("LLM_PROVIDER");
+                            // For now, only NoOp is available. Future: instantiate provider-specific client.
+                            bind(new io.dani.cloudkv.api.llm.NoOpLlmClient()).to(io.dani.cloudkv.api.llm.LlmClient.class);
+                        } else {
+                            bind(new io.dani.cloudkv.api.llm.NoOpLlmClient()).to(io.dani.cloudkv.api.llm.LlmClient.class);
+                        }
                         bind(new io.dani.cloudkv.api.ExportService(store)).to(io.dani.cloudkv.api.ExportService.class);
                     }
                 });
