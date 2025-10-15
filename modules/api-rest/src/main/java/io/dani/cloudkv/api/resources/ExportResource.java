@@ -5,6 +5,7 @@ import io.dani.cloudkv.api.ExportService;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -40,5 +41,16 @@ public class ExportResource {
         }
         String html = svc.snapshotHtml();
         return Response.ok(html).build();
+    }
+
+    @GET
+    @Path("/query")
+    @Produces(MediaType.APPLICATION_XML)
+    public Response xquery(@QueryParam("xq") String xq) throws Exception {
+        if (!enabled()) {
+            return Response.status(404).entity("XML export disabled").build();
+        }
+        String result = svc.runXQuery(xq);
+        return Response.ok(result).build();
     }
 }

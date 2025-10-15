@@ -10,6 +10,8 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.util.Map;
 
+import net.sf.saxon.s9api.*;
+
 public final class ExportService {
     private final KVStore store;
 
@@ -53,5 +55,19 @@ public final class ExportService {
         StringWriter out = new StringWriter();
         t.transform(new DOMSource(snapshotAsDocument()), new StreamResult(out));
         return out.toString();
+    }
+
+    public String runXQuery(String query) throws Exception {
+        Processor proc = new Processor(false);
+        XQueryCompiler comp = proc.newXQueryCompiler();
+        XQueryExecutable exec = comp.compile(query);
+        XQueryEvaluator eval = exec.load();
+        Document doc = snapshotAsDocument();
+        XdmNode ctx = proc.newDocumentBuilder().wrap(doc);
+        eval.setContextItem(ctx);
+        StringWriter sw = new StringWriter();
+        Serializer ser = proc.newSerializer(sw);
+        eval.run(ser);
+        return sw.toString();
     }
 }

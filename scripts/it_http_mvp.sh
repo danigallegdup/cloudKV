@@ -104,3 +104,20 @@ echo "RESPONSE: $HTML_OUT"
 echo "$HTML_OUT" | grep "<html" >/dev/null || fail "export html missing <html>"
 
 echo -e "\n✅ All HTTP MVP integration tests passed."
+
+say "XQUERY: select entries with key prefix k"
+ENC=$(python3 - <<'PY'
+import urllib.parse;print(urllib.parse.quote("for $e in /store/entry[starts-with(@key,'k')] return $e"))
+PY
+)
+XQ_OUT=$($CURL "${BASE_URL}/export/query?xq=${ENC}" || true)
+echo "RESPONSE: $XQ_OUT"
+echo "$XQ_OUT" | grep "<entry" >/dev/null || fail "xquery did not return entries"
+
+# Optional SOAP WSDL check if enabled
+if [ "${SOAP_ENABLED:-}" = "true" ] || [ "${SOAP_ENABLED:-}" = "1" ]; then
+  say "SOAP: WSDL"
+  WSDL=$($CURL "http://localhost:8090/soap/kv?wsdl" || true)
+  echo "RESPONSE: $WSDL"
+  echo "$WSDL" | grep -i "definitions" >/dev/null || fail "soap wsdl missing definitions"
+fi
