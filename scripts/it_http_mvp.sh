@@ -95,6 +95,10 @@ echo "RESPONSE: $OUT"
 
 echo -e "\n✅ All HTTP MVP integration tests passed."
 
+say "NLQ: basic"
+NLQ_OUT=$($CURL -sS -X POST "$BASE_URL/search/nlq" -H 'Content-Type: application/json' -d '{"query":"show keys that start with k"}')
+echo "RESPONSE: $NLQ_OUT"
+echo "$NLQ_OUT" | grep "xquery" >/dev/null || fail "nlq did not return xquery"
 say "XQUERY: select entries with key prefix k"
 ENC=$(python3 - <<'PY'
 import urllib.parse;print(urllib.parse.quote("for $e in /store/entry[starts-with(@key,'k')] return $e"))
