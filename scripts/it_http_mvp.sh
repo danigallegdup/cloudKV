@@ -94,3 +94,16 @@ echo "RESPONSE: $OUT"
 [[ "$(echo "$OUT" | jq -r .value)" == "v3" ]] || fail "concurrency write missing"
 
 echo -e "\n✅ All HTTP MVP integration tests passed."
+
+say "NLQ: basic"
+NLQ_OUT=$($CURL -sS -X POST "$BASE_URL/search/nlq" -H 'Content-Type: application/json' -d '{"query":"show keys that start with k"}')
+echo "RESPONSE: $NLQ_OUT"
+echo "$NLQ_OUT" | grep "xquery" >/dev/null || fail "nlq did not return xquery"
+
+# Optional SOAP WSDL check if enabled
+if [ "${SOAP_ENABLED:-}" = "true" ] || [ "${SOAP_ENABLED:-}" = "1" ]; then
+  say "SOAP: WSDL"
+  WSDL=$($CURL "http://localhost:8090/soap/kv?wsdl" || true)
+  echo "RESPONSE: $WSDL"
+  echo "$WSDL" | grep -i "definitions" >/dev/null || fail "soap wsdl missing definitions"
+fi
