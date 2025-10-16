@@ -23,12 +23,12 @@
 
 ## Highlights
 
-* **Java Web Server (REST/JAX‑RS + HTTPS):** Jetty 11 with Jersey 3 (HTTP/1.1), dev HTTPS profile, consistent status codes and error schema.
-* **SQL & Transactions (ACID awareness):** Transaction overlay with BEGIN/COMMIT/ROLLBACK; commit‑time persistence via JDBC/H2; rollback discards staged writes.
-* **Concurrency in a Web‑Server Context:** Thread‑safe CHM core, atomic commits, background TTL sweeper using ScheduledExecutorService under concurrent clients.
-* **XML Technology Stack:** /export/xml snapshot, XSLT transform to /export/html, and read‑only XQuery via Saxon s9api at /export/query.
-* **SOAP Interop (JAX‑WS):** Minimal SOAP wrapper (Metro) on port 8090 for get/put/delete, demonstrating familiarity beyond REST.
-* **LLM/AI API Familiarity:** NLQ endpoint maps simple English → deterministic XQuery templates; optional pluggable LLM client behind a feature flag.
+* **Java Web Server (REST/JAX‑RS + HTTPS):** Java web server (REST + dev HTTPS): Built an HTTP API on Jetty 11 using Jersey (JAX‑RS). Includes a local HTTPS/dev profile and consistent error/status handling across endpoints.
+* **SQL & Transactions (ACID awareness):** Transactions & optional persistence: Implemented a transaction overlay (BEGIN / COMMIT / ROLLBACK). Commits can write through to an embedded H2 database (via JDBC); rollbacks discard staged changes.
+* **Concurrency in a Web‑Server Context:** Concurrency & TTL: Core store uses a thread-safe ConcurrentHashMap with atomic commit semantics and a background TTL sweeper (ScheduledExecutorService) to expire keys under concurrent loads.
+* **XML Technology Stack:** XML publishing & queries: Produce an XML snapshot of the store and transform it to HTML via XSLT; support read-only XQuery (Saxon s9api) for ad-hoc XML queries.
+* **SOAP Interop (JAX‑WS):** SOAP interoperability: Lightweight JAX‑WS (Metro) SOAP wrapper on port 8090 exposing get/put/delete for systems that need SOAP rather than REST.
+* **LLM/AI API Familiarity:** NLQ / LLM integration: A simple natural-language endpoint maps plain English to deterministic XQuery templates; LLM client support is pluggable and off by default.
 
 ## Architecture (high‑level)
 
@@ -169,8 +169,7 @@ LLM_ENABLED=false \
 
 > HTTPS (dev): self‑signed keystore is wired for local profiles; REST examples below use HTTP for convenience.
 
-## Security Notes (dev focus) (dev focus)
-
+## Security Notes (dev focus)
 * Dev HTTPS uses a self‑signed keystore; do **not** reuse in production.
 * XQuery endpoint is **read‑only** and runs against an in‑memory snapshot.
 * NLQ mapping is deterministic by default; any LLM usage is opt‑in and isolated.
