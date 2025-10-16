@@ -19,6 +19,11 @@
 
 **A Concurrent Java Key–Value Store** with **RESTful**, **SQL**, **XML/XSLT/XQuery**, and **HTTPS** infrastructure features.
 
+currently working on:
+
+- fixing CI and integration and increasing test coverage
+- right now CI is in maintenance mode, but will be improved soon
+
 ![Verification GIF](./docs/MileStones/cloudkv_verification.gif)
 
 ## Highlights
