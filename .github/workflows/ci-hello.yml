@@ -1,0 +1,42 @@
+name: CI - Java Hello smoke test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  java-hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify java is available
+        run: |
+          java -version
+          javac -version || true
+
+      - name: Compile and run Hello.java
+        run: |
+          cat > Hello.java <<'JAVA'
+          public class Hello {
+            public static void main(String[] args) {
+              System.out.println("Hello, world");
+            }
+          }
+          JAVA
+          javac Hello.java
+          OUT=$(java Hello)
+          echo "Program output: '$OUT'"
+          if [ "$OUT" != "Hello, world" ]; then
+            echo "Unexpected output"
+            exit 1
+          fi
