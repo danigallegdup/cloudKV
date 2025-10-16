@@ -11,7 +11,6 @@
   <img src="https://img.shields.io/badge/XQuery-s9api-brightgreen" />
   <img src="https://img.shields.io/badge/SOAP-JAX--WS%20(Metro)-blueviolet" />
   <img src="https://img.shields.io/badge/Build-Gradle%209%20(KTS)-blue" />
-  <img src="https://img.shields.io/badge/CI-GitHub%20Actions-lightgrey" />
   <img src="https://img.shields.io/badge/Docs-ADRs%20%7C%20PlantUML-important" />
   <img src="https://img.shields.io/badge/CLI-curl%20%7C%20jq-green" />
   <img src="https://img.shields.io/badge/OS-Linux%20%7C%20WSL-black" />
