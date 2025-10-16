@@ -1,4 +1,4 @@
-name: CI - Java Hello smoke test
+name: CloudKV MVP Integration Tests
 
 on:
   push:
