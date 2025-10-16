@@ -24,7 +24,20 @@ jobs:
           java -version
           javac -version || true
 
-      - name: Compile and run Hello.java
+      - name: check
+        run: |
+          npm install -g markdownlint-cli@0.34.0 || true
+          markdownlint README.md || true
+
+      - name: Check XSL files
+        run: |
+          missing=0
+          for f in modules/api-rest/src/main/resources/xsl/*.xsl; do
+            if [ ! -f "$f" ]; then missing=1; fi
+          done
+          if [ $missing -eq 1 ]; then echo "Missing XSL files"; exit 1; fi
+
+      - name: Compile
         run: |
           cat > Hello.java <<'JAVA'
           public class Hello {
